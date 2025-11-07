@@ -2,51 +2,36 @@ package cst
 
 // 数据库相关
 const (
-	ID             = "_id"
-	Status         = "status"
-	Phone          = "phone"
-	Name           = "name"
-	Address        = "address"
-	Contact        = "contact"
-	CreateTime     = "createTime"
-	UpdateTime     = "updateTime"
-	DeleteTime     = "deleteTime"
-	Password       = "password"
-	NotEqual       = "$ne"
-	Account        = "account"
-	VerifyPassword = "verifyPassword"
-	VerifyType     = "verifyType"
-	Form           = "form"
+	ID         = "_id"
+	Status     = "status"
+	Phone      = "phone"
+	Code       = "code"
+	Name       = "name"
+	UnitID     = "unitId"
+	Gender     = "gender"
+	Birth      = "birth"
+	EnrollYear = "enrollYear"
+	Grade      = "grade"
+	Class      = "class"
+	Address    = "address"
+	Contact    = "contact"
+	CreateTime = "createTime"
+	UpdateTime = "updateTime"
+	DeleteTime = "deleteTime"
+	Password   = "password"
+	NotEqual   = "$ne"
+	Account    = "account"
 )
 
 // password
 const (
 	DefaultPassword = "123456"
-	UpdateByOldPwd  = 0
-	UpdateByCode    = 1
 )
 
-// status
+// 前端字段相关
 const (
-	Active  = 0
-	Deleted = 1
-)
-
-// gender
-const (
-	Unknown = 0
-	Male    = 1
-	Female  = 2
-)
-
-// code type
-const (
-	CodeTypePhone = 0
-	COdeTypeCode  = 1
-)
-
-// config type
-const (
-	Chain   = 0
-	End2End = 1
+	AuthTypePhonePassword     = "phone-password"
+	AuthTypePhoneCode         = "phone-code"
+	AuthTypeStudentIDPassword = "studentId-password"
+	AuthTypeWeakAuth          = "weak"
 )

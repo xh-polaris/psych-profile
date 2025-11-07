@@ -10,6 +10,12 @@ import (
 	"github.com/xh-polaris/psych-profile/biz/infra/mapper/user"
 )
 
+var ControllerSet = wire.NewSet(
+	controller.UserControllerSet,
+	controller.UnitControllerSet,
+	controller.ConfigControllerSet,
+)
+
 var ApplicationSet = wire.NewSet(
 	service.UserServiceSet,
 	service.UnitServiceSet,
@@ -25,12 +31,6 @@ var MapperSet = wire.NewSet(
 var InfraSet = wire.NewSet(
 	infraconfig.NewConfig,
 	MapperSet,
-)
-
-var ControllerSet = wire.NewSet(
-	controller.UserControllerSet,
-	controller.UnitControllerSet,
-	controller.ConfigControllerSet,
 )
 
 var ServerProvider = wire.NewSet(
