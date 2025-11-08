@@ -15,8 +15,8 @@ const (
 
 // code type
 const (
-	CodeTypePhone = 0
-	CodeTypeCode  = 1
+	CodeTypePhone     = 0
+	CodeTypeStudentID = 1
 )
 
 // config type
@@ -37,8 +37,8 @@ var genderMap = map[string]int{
 }
 
 var codeTypeMap = map[string]int{
-	"phone": CodeTypePhone,
-	"code":  CodeTypeCode,
+	"phone":     CodeTypePhone,
+	"studentId": CodeTypeStudentID,
 }
 
 var configTypeMap = map[string]int{
@@ -58,8 +58,8 @@ var genderMapReverse = map[int]string{
 }
 
 var codeTypeMapReverse = map[int]string{
-	CodeTypePhone: "phone",
-	CodeTypeCode:  "code",
+	CodeTypePhone:     "phone",
+	CodeTypeStudentID: "studentId",
 }
 
 var configTypeMapReverse = map[int]string{

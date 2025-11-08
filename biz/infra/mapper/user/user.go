@@ -6,7 +6,7 @@ import (
 
 type User struct {
 	ID         primitive.ObjectID `json:"id,omitempty" bson:"_id,omitempty"`
-	CodeType   int                `json:"codeType,omitempty" bson:"codeType,omitempty"` // Phone | Code
+	CodeType   int                `json:"codeType,omitempty" bson:"codeType,omitempty"` // Phone | StudentID
 	Code       string             `json:"code,omitempty" bson:"code,omitempty"`
 	Password   string             `json:"password,omitempty" bson:"password,omitempty"`
 	UnitID     primitive.ObjectID `json:"unitId,omitempty" bson:"unitId,omitempty"`
