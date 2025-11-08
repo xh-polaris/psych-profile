@@ -16,6 +16,7 @@ const (
 	ErrUserNotFound           = 1007
 	ErrInternalError          = 1008
 	ErrPhoneAlreadyExist      = 1009
+	ErrWrongPassword          = 1010
 )
 
 func init() {
@@ -67,6 +68,11 @@ func init() {
 	code.Register(
 		ErrPhoneAlreadyExist,
 		"手机号已被注册",
+		code.WithAffectStability(false),
+	)
+	code.Register(
+		ErrWrongPassword,
+		"密码错误",
 		code.WithAffectStability(false),
 	)
 }

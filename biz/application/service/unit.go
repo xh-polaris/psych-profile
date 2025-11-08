@@ -39,7 +39,7 @@ type UnitService struct {
 
 var UnitServiceSet = wire.NewSet(
 	wire.Struct(new(UnitService), "*"),
-	wire.Bind(new(IConfigService), new(*UnitService)),
+	wire.Bind(new(IUnitService), new(*UnitService)),
 )
 
 func (u *UnitService) UnitSignUp(ctx context.Context, req *profile.UnitSignUpReq) (*profile.UnitSignUpResp, error) {
@@ -57,21 +57,22 @@ func (u *UnitService) UnitSignUp(ctx context.Context, req *profile.UnitSignUpReq
 		return nil, errorx.New(errno.ErrMissingParams, errorx.KV("field", "密码"))
 	}
 
+	// 手机号格式校验
 	if !reg.CheckMobile(req.Unit.Phone) {
 		return nil, errorx.New(errno.ErrInvalidParams, errorx.KV("field", "电话号码"))
 	}
 
 	// 检查手机号是否已注册
-	if unitDAO, err := u.UnitMapper.FindOneByPhone(ctx, req.Unit.Phone); err != nil {
-		logs.Errorf("find unit by phone error: %s", errorx.ErrorWithoutStack(err))
+	if exists, err := u.UnitMapper.ExistsByPhone(ctx, req.Unit.Phone); err != nil {
+		logs.Errorf("check phone exists error: %s", errorx.ErrorWithoutStack(err))
 		return nil, err
-	} else if unitDAO != nil {
+	} else if exists {
 		return nil, errorx.New(errno.ErrPhoneAlreadyExist)
 	}
-	if userDAO, err := u.UserMapper.FindOneByPhone(ctx, req.Unit.Phone); err != nil {
-		logs.Errorf("find user by phone error: %s", errorx.ErrorWithoutStack(err))
+	if exists, err := u.UserMapper.ExistsByPhone(ctx, req.Unit.Phone); err != nil {
+		logs.Errorf("check phone exists error: %s", errorx.ErrorWithoutStack(err))
 		return nil, err
-	} else if userDAO != nil {
+	} else if exists {
 		return nil, errorx.New(errno.ErrPhoneAlreadyExist)
 	}
 
@@ -145,12 +146,13 @@ func (u *UnitService) UnitSignIn(ctx context.Context, req *profile.UnitSignInReq
 	}
 
 	// 验证方式
+	var err error
 	unitDAO := &unit.Unit{}
 	switch req.AuthType {
 	// 密码登录
 	case cst.AuthTypePhonePassword:
 		// 获得用户
-		unitDAO, err := u.UnitMapper.FindOneByPhone(ctx, req.Phone)
+		unitDAO, err = u.UnitMapper.FindOneByPhone(ctx, req.Phone)
 		if err != nil {
 			logs.Errorf("find unit by phone error: %s", errorx.ErrorWithoutStack(err))
 			return nil, err
@@ -280,18 +282,18 @@ func (u *UnitService) UnitUpdatePassword(ctx context.Context, req *profile.UnitU
 	unitDAO := &unit.Unit{}
 	switch req.AuthType {
 	// 验证码
-	case cst.AuthTypePhoneCode:
+	case cst.AuthTypeCode:
 		return nil, errorx.New(errno.ErrUnImplement) // TODO: 验证码登录
 	// 密码
-	case cst.AuthTypePhonePassword:
+	case cst.AuthTypeOldPassword:
 		// 获取密码
 		unitDAO, err := u.UnitMapper.FindOne(ctx, unitId)
 		if err != nil {
 			logs.Errorf("find unit by phone error: %s", errorx.ErrorWithoutStack(err))
 			return nil, err
 		}
-		if !encrypt.BcryptCheck(unitDAO.Password, req.AuthValue) {
-			return nil, errorx.New(errno.ErrWrongAccountOrPassword)
+		if !encrypt.BcryptCheck(req.AuthValue, unitDAO.Password) {
+			return nil, errorx.New(errno.ErrWrongPassword)
 		}
 	}
 
@@ -382,24 +384,24 @@ func (u *UnitService) UnitCreateAndLinkUser(ctx context.Context, req *profile.Un
 			}
 
 			// 检查手机号是否已注册
-			if unitDAO, err := u.UnitMapper.FindOneByPhone(ctx, userReq.Code); err != nil {
-				logs.Errorf("find unit by phone error: %s", errorx.ErrorWithoutStack(err))
+			if exists, err := u.UnitMapper.ExistsByPhone(ctx, userReq.Code); err != nil {
+				logs.Errorf("check phone exists error: %s", errorx.ErrorWithoutStack(err))
 				return nil, err
-			} else if unitDAO != nil {
+			} else if exists {
 				return nil, errorx.New(errno.ErrPhoneAlreadyExist)
 			}
-			if userDAO, err := u.UserMapper.FindOneByPhone(ctx, userReq.Code); err != nil {
-				logs.Errorf("find user by phone error: %s", errorx.ErrorWithoutStack(err))
+			if exists, err := u.UserMapper.ExistsByPhone(ctx, userReq.Code); err != nil {
+				logs.Errorf("check phone exists error: %s", errorx.ErrorWithoutStack(err))
 				return nil, err
-			} else if userDAO != nil {
+			} else if exists {
 				return nil, errorx.New(errno.ErrPhoneAlreadyExist)
 			}
 		} else {
 			// 检查学号是否已注册
-			if userDAO, err := u.UserMapper.FindOneByStudentID(ctx, userReq.Code); err != nil {
-				logs.Errorf("find unit by student id error: %s", errorx.ErrorWithoutStack(err))
+			if exists, err := u.UserMapper.ExistsByStudentID(ctx, userReq.Code); err != nil {
+				logs.Errorf("check student id exists error: %s", errorx.ErrorWithoutStack(err))
 				return nil, err
-			} else if userDAO != nil {
+			} else if exists {
 				return nil, errorx.New(errno.ErrStudentIDAlreadyExist)
 			}
 		}

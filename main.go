@@ -1,16 +1,17 @@
-package psych_profile
+package main
 
 import (
+	"net"
+
 	"github.com/cloudwego/kitex/pkg/klog"
 	"github.com/cloudwego/kitex/pkg/rpcinfo"
 	"github.com/cloudwego/kitex/server"
 	"github.com/kitex-contrib/obs-opentelemetry/tracing"
 	"github.com/xh-polaris/gopkg/kitex/middleware"
-	"github.com/xh-polaris/psych-idl/kitex_gen/user/psychuserservice"
+	"github.com/xh-polaris/psych-idl/kitex_gen/profile/psychprofileservice"
 	"github.com/xh-polaris/psych-profile/biz/infra/config"
 	"github.com/xh-polaris/psych-profile/pkg/logs"
 	"github.com/xh-polaris/psych-profile/provider"
-	"net"
 )
 
 func main() {
@@ -23,7 +24,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	svr := psychuserservice.NewServer(
+	svr := psychprofileservice.NewServer(
 		s,
 		server.WithServiceAddr(addr),
 		server.WithSuite(tracing.NewServerSuite()),

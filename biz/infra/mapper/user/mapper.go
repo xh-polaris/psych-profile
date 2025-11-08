@@ -25,6 +25,8 @@ type IMongoMapper interface {
 	FindOne(ctx context.Context, id primitive.ObjectID) (*User, error)
 	Insert(ctx context.Context, user *User) error
 	UpdateField(ctx context.Context, id primitive.ObjectID, update bson.M) error
+	ExistsByPhone(ctx context.Context, phone string) (bool, error)
+	ExistsByStudentID(ctx context.Context, studentId string) (bool, error)
 }
 
 type mongoMapper struct {
@@ -53,4 +55,14 @@ func (m *mongoMapper) FindOneByStudentID(ctx context.Context, studentId string) 
 // FindOneByAccount 根据账号查询用户
 func (m *mongoMapper) FindOneByAccount(ctx context.Context, account string) (*User, error) {
 	return m.FindOneByField(ctx, cst.Code, account)
+}
+
+// ExistsByPhone 根据电话号码查询用户是否存在
+func (m *mongoMapper) ExistsByPhone(ctx context.Context, phone string) (bool, error) {
+	return m.ExistsByField(ctx, cst.Code, phone)
+}
+
+// ExistsByStudentID 根据学号查询用户是否存在
+func (m *mongoMapper) ExistsByStudentID(ctx context.Context, studentId string) (bool, error) {
+	return m.ExistsByField(ctx, cst.Code, studentId)
 }
