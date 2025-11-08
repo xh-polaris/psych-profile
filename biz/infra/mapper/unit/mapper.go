@@ -23,6 +23,7 @@ type IMongoMapper interface {
 	FindOne(ctx context.Context, id primitive.ObjectID) (*Unit, error)
 	Insert(ctx context.Context, unit *Unit) error
 	UpdateField(ctx context.Context, id primitive.ObjectID, update bson.M) error
+	ExistsByPhone(ctx context.Context, phone string) (bool, error)
 }
 
 type mongoMapper struct {
@@ -38,6 +39,12 @@ func NewMongoMapper(config *config.Config) IMongoMapper {
 	}
 }
 
+// FindOneByPhone 根据手机号查询单位
 func (m *mongoMapper) FindOneByPhone(ctx context.Context, phone string) (*Unit, error) {
 	return m.FindOneByField(ctx, cst.Phone, phone)
+}
+
+// ExistsByPhone 根据手机号查询单位是否存在
+func (m *mongoMapper) ExistsByPhone(ctx context.Context, phone string) (bool, error) {
+	return m.ExistsByField(ctx, cst.Phone, phone)
 }

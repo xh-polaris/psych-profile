@@ -34,4 +34,6 @@ const (
 	AuthTypePhoneCode         = "phone-code"
 	AuthTypeStudentIDPassword = "studentId-password"
 	AuthTypeWeakAuth          = "weak"
+	AuthTypeOldPassword       = "oldPassword"
+	AuthTypeCode              = "code"
 )

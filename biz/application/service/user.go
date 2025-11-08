@@ -57,17 +57,16 @@ func (u *UserService) UserSignUp(ctx context.Context, req *profile.UserSignUpReq
 		return nil, errorx.New(errno.ErrMissingParams, errorx.KV("field", "姓名"))
 	}
 
-	// 检查手机号是否已注册
-	if unitDAO, err := u.UnitMapper.FindOneByPhone(ctx, req.User.Code); err != nil {
-		logs.Errorf("find unit by phone error: %s", errorx.ErrorWithoutStack(err))
-		return nil, err
-	} else if unitDAO != nil {
-		return nil, errorx.New(errno.ErrPhoneAlreadyExist)
+	// 手机号格式校验
+	if !reg.CheckMobile(req.User.Code) {
+		return nil, errorx.New(errno.ErrInvalidParams, errorx.KV("field", "电话号码"))
 	}
-	if userDAO, err := u.UserMapper.FindOneByPhone(ctx, req.User.Code); err != nil {
-		logs.Errorf("find user by phone error: %s", errorx.ErrorWithoutStack(err))
+
+	// 检查手机号是否已注册
+	if exists, err := u.UserMapper.ExistsByPhone(ctx, req.User.Code); err != nil {
+		logs.Errorf("check phone exists error: %s", errorx.ErrorWithoutStack(err))
 		return nil, err
-	} else if userDAO != nil {
+	} else if exists {
 		return nil, errorx.New(errno.ErrPhoneAlreadyExist)
 	}
 
@@ -158,6 +157,7 @@ func (u *UserService) UserSignIn(ctx context.Context, req *profile.UserSignInReq
 	}
 
 	var strong bool // 强密码
+	var err error
 	userDAO := &user.User{}
 
 	switch req.AuthType {
@@ -174,7 +174,7 @@ func (u *UserService) UserSignIn(ctx context.Context, req *profile.UserSignInReq
 		}
 
 		// 获得用户
-		if userDAO, err := u.UserMapper.FindOneByPhone(ctx, req.AuthId); err != nil {
+		if userDAO, err = u.UserMapper.FindOneByPhone(ctx, req.AuthId); err != nil {
 			logs.Errorf("find user by phone error: %s", errorx.ErrorWithoutStack(err))
 			return nil, err
 		} else if userDAO == nil {
@@ -293,7 +293,8 @@ func (u *UserService) UserGetInfo(ctx context.Context, req *profile.UserGetInfoR
 	if !ok {
 		return nil, errorx.New(errno.ErrInternalError)
 	}
-	optionsAny, ok := convert.ConvertOptionsToAny(userDAO.Options)
+
+	optionsAny, ok := convert.OptionsToAny(userDAO.Options)
 	if !ok {
 		return nil, errorx.New(errno.ErrInternalError)
 	}
@@ -363,7 +364,7 @@ func (u *UserService) UserUpdateInfo(ctx context.Context, req *profile.UserUpdat
 
 	// 一次更新所有字段
 	if len(update) > 0 {
-		if err = u.UnitMapper.UpdateField(ctx, userId, update); err != nil {
+		if err = u.UserMapper.UpdateField(ctx, userId, update); err != nil {
 			logs.Errorf("update user error: %s", errorx.ErrorWithoutStack(err))
 			return nil, err
 		}
@@ -401,18 +402,18 @@ func (u *UserService) UserUpdatePassword(ctx context.Context, req *profile.UserU
 	userDAO := &user.User{}
 	switch req.AuthType {
 	// 验证码
-	case cst.AuthTypePhoneCode:
+	case cst.AuthTypeCode:
 		return nil, errorx.New(errno.ErrUnImplement) // TODO: 验证码登录
 	// 密码
-	case cst.AuthTypePhonePassword:
+	case cst.AuthTypeOldPassword:
 		// 获取密码
 		userDAO, err := u.UserMapper.FindOne(ctx, userId)
 		if err != nil {
 			logs.Errorf("find user by phone error: %s", errorx.ErrorWithoutStack(err))
 			return nil, err
 		}
-		if !encrypt.BcryptCheck(userDAO.Password, req.AuthValue) {
-			return nil, errorx.New(errno.ErrWrongAccountOrPassword)
+		if !encrypt.BcryptCheck(req.AuthValue, userDAO.Password) {
+			return nil, errorx.New(errno.ErrWrongPassword)
 		}
 	}
 

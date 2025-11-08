@@ -20,6 +20,8 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
+	"os"
 )
 
 // FormatLogger is a logs interface that output logs with a format.
@@ -116,6 +118,9 @@ type KlogLogger struct {
 
 func NewKlogLogger() *KlogLogger {
 	return &KlogLogger{
-		&defaultLogger{},
+		&defaultLogger{
+			stdlog: log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile|log.Lmicroseconds),
+			level:  LevelInfo,
+		},
 	}
 }
