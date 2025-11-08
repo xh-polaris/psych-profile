@@ -128,20 +128,20 @@ func (u *UnitService) UnitSignUp(ctx context.Context, req *profile.UnitSignUpReq
 
 func (u *UnitService) UnitSignIn(ctx context.Context, req *profile.UnitSignInReq) (*profile.UnitSignInResp, error) {
 	// 参数校验
-	if req.Phone == "" {
+	if req.AuthId == "" {
 		return nil, errorx.New(errno.ErrMissingParams, errorx.KV("field", "电话号码"))
 	}
 	if req.AuthType == "" {
 		return nil, errorx.New(errno.ErrMissingParams, errorx.KV("field", "验证方式"))
 	}
-	if req.VerifyCode == "" && req.AuthType == cst.AuthTypePhonePassword {
+	if req.AuthValue == "" && req.AuthType == cst.AuthTypePhonePassword {
 		return nil, errorx.New(errno.ErrMissingParams, errorx.KV("field", "密码"))
 	}
-	if req.VerifyCode == "" && req.AuthType == cst.AuthTypePhoneCode {
+	if req.AuthValue == "" && req.AuthType == cst.AuthTypePhoneCode {
 		return nil, errorx.New(errno.ErrMissingParams, errorx.KV("field", "验证码"))
 	}
 
-	if !reg.CheckMobile(req.Phone) {
+	if !reg.CheckMobile(req.AuthId) {
 		return nil, errorx.New(errno.ErrInvalidParams, errorx.KV("field", "电话号码"))
 	}
 
@@ -152,7 +152,7 @@ func (u *UnitService) UnitSignIn(ctx context.Context, req *profile.UnitSignInReq
 	// 密码登录
 	case cst.AuthTypePhonePassword:
 		// 获得用户
-		unitDAO, err = u.UnitMapper.FindOneByPhone(ctx, req.Phone)
+		unitDAO, err = u.UnitMapper.FindOneByPhone(ctx, req.AuthId)
 		if err != nil {
 			logs.Errorf("find unit by phone error: %s", errorx.ErrorWithoutStack(err))
 			return nil, err
@@ -161,7 +161,7 @@ func (u *UnitService) UnitSignIn(ctx context.Context, req *profile.UnitSignInReq
 		}
 
 		// 获得密码
-		if !encrypt.BcryptCheck(unitDAO.Password, req.VerifyCode) {
+		if !encrypt.BcryptCheck(req.AuthValue, unitDAO.Password) {
 			return nil, errorx.New(errno.ErrWrongAccountOrPassword)
 		}
 	// 验证码登录
@@ -287,7 +287,7 @@ func (u *UnitService) UnitUpdatePassword(ctx context.Context, req *profile.UnitU
 	// 密码
 	case cst.AuthTypeOldPassword:
 		// 获取密码
-		unitDAO, err := u.UnitMapper.FindOne(ctx, unitId)
+		unitDAO, err = u.UnitMapper.FindOne(ctx, unitId)
 		if err != nil {
 			logs.Errorf("find unit by phone error: %s", errorx.ErrorWithoutStack(err))
 			return nil, err
@@ -338,7 +338,8 @@ func (u *UnitService) UnitLinkUser(ctx context.Context, req *profile.UnitLinkUse
 		return nil, err
 	}
 
-	if err := u.UnitMapper.UpdateField(ctx, userId, bson.M{cst.UnitID: unitId}); err != nil {
+	// 绑定用户
+	if err := u.UserMapper.UpdateField(ctx, userId, bson.M{cst.UnitID: unitId}); err != nil {
 		logs.Errorf("update user error: %s", errorx.ErrorWithoutStack(err))
 		return nil, err
 	}
@@ -358,16 +359,22 @@ func (u *UnitService) UnitCreateAndLinkUser(ctx context.Context, req *profile.Un
 		return nil, errorx.New(errno.ErrMissingParams, errorx.KV("field", "用户列表"))
 	}
 
+	// 提取枚举值
+	codeType, ok := enum.ParseCodeType(req.CodeType)
+	if !ok {
+		return nil, errorx.New(errno.ErrInvalidParams, errorx.KV("field", "验证方式"))
+	}
+
 	// 验证方式标记
-	isAuthTypePhone := req.CodeType == cst.AuthTypePhoneCode
+	isCodeTypePhone := codeType == enum.CodeTypePhone
 
 	// 插入用户
 	for _, userReq := range req.Users {
 		// 参数校验
-		if userReq.Code == "" && isAuthTypePhone {
+		if userReq.Code == "" && isCodeTypePhone {
 			return nil, errorx.New(errno.ErrMissingParams, errorx.KV("field", "电话"))
 		}
-		if userReq.Code == "" && !isAuthTypePhone {
+		if userReq.Code == "" && !isCodeTypePhone {
 			return nil, errorx.New(errno.ErrMissingParams, errorx.KV("field", "学号"))
 		}
 		if userReq.Name == "" {
@@ -377,7 +384,7 @@ func (u *UnitService) UnitCreateAndLinkUser(ctx context.Context, req *profile.Un
 			return nil, errorx.New(errno.ErrMissingParams, errorx.KV("field", "密码"))
 		}
 
-		if isAuthTypePhone {
+		if isCodeTypePhone {
 			// 如果说验证方式是手机，则需要检测手机号的格式
 			if !reg.CheckMobile(userReq.Code) {
 				return nil, errorx.New(errno.ErrInvalidParams, errorx.KV("field", "手机号"))

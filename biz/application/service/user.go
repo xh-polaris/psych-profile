@@ -407,7 +407,7 @@ func (u *UserService) UserUpdatePassword(ctx context.Context, req *profile.UserU
 	// 密码
 	case cst.AuthTypeOldPassword:
 		// 获取密码
-		userDAO, err := u.UserMapper.FindOne(ctx, userId)
+		userDAO, err = u.UserMapper.FindOne(ctx, userId)
 		if err != nil {
 			logs.Errorf("find user by phone error: %s", errorx.ErrorWithoutStack(err))
 			return nil, err
