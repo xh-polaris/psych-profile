@@ -1,8 +1,14 @@
 package user
 
 import (
+	"context"
+
 	"github.com/xh-polaris/psych-profile/biz/infra/config"
+	"github.com/xh-polaris/psych-profile/biz/infra/cst"
+	"github.com/xh-polaris/psych-profile/biz/infra/mapper"
 	"github.com/zeromicro/go-zero/core/stores/monc"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 var _ IMongoMapper = (*mongoMapper)(nil)
@@ -13,15 +19,38 @@ const (
 )
 
 type IMongoMapper interface {
+	FindOneByPhone(ctx context.Context, phone string) (*User, error)
+	FindOneByStudentID(ctx context.Context, studentId string) (*User, error)
+	FindOneByAccount(ctx context.Context, account string) (*User, error)
+	FindOne(ctx context.Context, id primitive.ObjectID) (*User, error)
+	Insert(ctx context.Context, user *User) error
+	UpdateField(ctx context.Context, id primitive.ObjectID, update bson.M) error
 }
 
 type mongoMapper struct {
+	mapper.IMongoMapper[User]
 	conn *monc.Model
 }
 
 func NewMongoMapper(config *config.Config) IMongoMapper {
 	conn := monc.MustNewModel(config.Mongo.URL, config.Mongo.DB, collectionName, config.Cache)
 	return &mongoMapper{
-		conn: conn,
+		IMongoMapper: mapper.NewMongoMapper[User](conn),
+		conn:         conn,
 	}
+}
+
+// FindOneByPhone 根据电话号码查询用户
+func (m *mongoMapper) FindOneByPhone(ctx context.Context, phone string) (*User, error) {
+	return m.FindOneByField(ctx, cst.Code, phone)
+}
+
+// FindOneByStudentID 根据学号查询用户
+func (m *mongoMapper) FindOneByStudentID(ctx context.Context, studentId string) (*User, error) {
+	return m.FindOneByField(ctx, cst.Code, studentId)
+}
+
+// FindOneByAccount 根据账号查询用户
+func (m *mongoMapper) FindOneByAccount(ctx context.Context, account string) (*User, error) {
+	return m.FindOneByField(ctx, cst.Code, account)
 }
