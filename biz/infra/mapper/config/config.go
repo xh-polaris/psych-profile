@@ -9,8 +9,6 @@ type Chat struct {
 	Description string `json:"description,omitempty" bson:"description,omitempty"`
 	Provider    string `json:"provider,omitempty" bson:"provider,omitempty"`
 	AppID       string `json:"appId,omitempty" bson:"appId,omitempty"`
-	CreateTime  int64  `json:"createTime,omitempty" bson:"createTime,omitempty"`
-	UpdateTime  int64  `json:"updateTime,omitempty" bson:"updateTime,omitempty"`
 }
 
 type TTS struct {
@@ -18,8 +16,6 @@ type TTS struct {
 	Description string `json:"description,omitempty" bson:"description,omitempty"`
 	Provider    string `json:"provider,omitempty" bson:"provider,omitempty"`
 	AppID       string `json:"appId,omitempty" bson:"appId,omitempty"`
-	CreateTime  int64  `json:"createTime,omitempty" bson:"createTime,omitempty"`
-	UpdateTime  int64  `json:"updateTime,omitempty" bson:"updateTime,omitempty"`
 }
 
 type Report struct {
@@ -27,12 +23,11 @@ type Report struct {
 	Description string `json:"description,omitempty" bson:"description,omitempty"`
 	Provider    string `json:"provider,omitempty" bson:"provider,omitempty"`
 	AppID       string `json:"appId,omitempty" bson:"appId,omitempty"`
-	CreateTime  int64  `json:"createTime,omitempty" bson:"createTime,omitempty"`
-	UpdateTime  int64  `json:"updateTime,omitempty" bson:"updateTime,omitempty"`
 }
 
 type Config struct {
 	ID         primitive.ObjectID `json:"id,omitempty" bson:"_id,omitempty"`
+	UnitID     primitive.ObjectID `json:"unitId,omitempty" bson:"unitId,omitempty"`
 	Type       int                `json:"type,omitempty" bson:"type,omitempty"` // Chain | End2End
 	Chat       *Chat              `json:"chat,omitempty" bson:"chat,omitempty"`
 	TTS        *TTS               `json:"tts,omitempty" bson:"tts,omitempty"`
