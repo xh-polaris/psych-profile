@@ -28,11 +28,11 @@ type Report struct {
 type Config struct {
 	ID         primitive.ObjectID `json:"id,omitempty" bson:"_id,omitempty"`
 	UnitID     primitive.ObjectID `json:"unitId,omitempty" bson:"unitId,omitempty"`
-	Type       int32              `json:"type,omitempty" bson:"type,omitempty"` // Chain | End2End
+	Type       int                `json:"type,omitempty" bson:"type,omitempty"` // Chain | End2End
 	Chat       *Chat              `json:"chat,omitempty" bson:"chat,omitempty"`
 	TTS        *TTS               `json:"tts,omitempty" bson:"tts,omitempty"`
 	Report     *Report            `json:"report,omitempty" bson:"report,omitempty"`
-	Status     int32              `json:"status,omitempty" bson:"status,omitempty"`
+	Status     int                `json:"status,omitempty" bson:"status,omitempty"`
 	CreateTime int64              `json:"createTime,omitempty" bson:"createTime,omitempty"`
 	UpdateTime int64              `json:"updateTime,omitempty" bson:"updateTime,omitempty"`
 	DeleteTime int64              `json:"deleteTime,omitempty" bson:"deleteTime,omitempty"`

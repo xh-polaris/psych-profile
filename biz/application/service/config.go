@@ -20,7 +20,7 @@ var _ IConfigService = (*ConfigService)(nil)
 
 type IConfigService interface {
 	ConfigCreate(ctx context.Context, req *profile.ConfigCreateOrUpdateReq) (resp *basic.Response, err error)
-	ConfigUpdate(ctx context.Context, req *profile.ConfigCreateOrUpdateReq) (resp *basic.Response, err error)
+	ConfigUpdateInfo(ctx context.Context, req *profile.ConfigCreateOrUpdateReq) (resp *basic.Response, err error)
 	ConfigGetByUnitID(ctx context.Context, req *profile.ConfigGetByUnitIdReq) (resp *profile.ConfigGetByUnitIdResp, err error)
 }
 
@@ -47,11 +47,16 @@ func (c *ConfigService) ConfigCreate(ctx context.Context, req *profile.ConfigCre
 	if err != nil {
 		return nil, errorx.New(errno.ErrInvalidParams, errorx.KV("field", "UnitID"), errorx.KV("value", "单位ID"))
 	}
+	confType, ok := enum.ParseConfigType(req.Config.Type)
+	if !ok {
+		return nil, errorx.New(errno.ErrInvalidParams, errorx.KV("field", "配置类型"))
+	}
+
 	// 构造并插入数据库
 	now := time.Now().Unix()
 	confDAO := &config.Config{
 		ID:     primitive.NewObjectID(),
-		Type:   req.Config.Type,
+		Type:   confType,
 		UnitID: unitOID,
 		Chat: &config.Chat{
 			Name:        req.Config.Chat.Name,
@@ -76,7 +81,7 @@ func (c *ConfigService) ConfigCreate(ctx context.Context, req *profile.ConfigCre
 		UpdateTime: now,
 	}
 	// 插入数据库
-	if err := c.ConfigMapper.Insert(ctx, confDAO); err != nil {
+	if err = c.ConfigMapper.Insert(ctx, confDAO); err != nil {
 		logs.Errorf("insert config error: %s", errorx.ErrorWithoutStack(err))
 		return nil, err
 	}
@@ -84,7 +89,7 @@ func (c *ConfigService) ConfigCreate(ctx context.Context, req *profile.ConfigCre
 	return &basic.Response{}, nil
 }
 
-func (c *ConfigService) ConfigUpdate(ctx context.Context, req *profile.ConfigCreateOrUpdateReq) (resp *basic.Response, err error) {
+func (c *ConfigService) ConfigUpdateInfo(ctx context.Context, req *profile.ConfigCreateOrUpdateReq) (resp *basic.Response, err error) {
 	// 鉴权
 	if !req.Admin {
 		return nil, errorx.New(errno.ErrNotAdmin)
@@ -116,11 +121,11 @@ func (c *ConfigService) ConfigUpdate(ctx context.Context, req *profile.ConfigCre
 
 func (c *ConfigService) ConfigGetByUnitID(ctx context.Context, req *profile.ConfigGetByUnitIdReq) (resp *profile.ConfigGetByUnitIdResp, err error) {
 	// 参数校验和转化
-	if req.GetId() == "" {
+	if req.UnitId == "" {
 		return nil, errorx.New(errno.ErrMissingParams, errorx.KV("field", "单位ID"))
 	}
 
-	unitOid, err := primitive.ObjectIDFromHex(req.GetId())
+	unitOid, err := primitive.ObjectIDFromHex(req.UnitId)
 	if err != nil {
 		return nil, errorx.New(errno.ErrInvalidParams, errorx.KV("field", "单位ID"))
 	}
@@ -139,7 +144,7 @@ func (c *ConfigService) ConfigGetByUnitID(ctx context.Context, req *profile.Conf
 		}, nil
 	case false:
 		return &profile.ConfigGetByUnitIdResp{
-			Config: publicConfig(configDAO), // 隐藏appID, secretKey字段
+			Config: publicConfig(configDAO), // 隐藏appID字段
 		}, nil
 	}
 
@@ -153,6 +158,11 @@ func validateCreateConfigReq(req *profile.ConfigCreateOrUpdateReq) error {
 	// 基础字段
 	if req.Config.UnitID == "" {
 		return errorx.New(errno.ErrMissingParams, errorx.KV("field", "单位ID"))
+	}
+
+	// 验证配置类型
+	if _, ok := enum.ParseConfigType(req.Config.Type); !ok {
+		return errorx.New(errno.ErrInvalidParams, errorx.KV("field", "配置类型"))
 	}
 
 	// chat配置
@@ -212,14 +222,19 @@ func extractUpdateBSON(req *profile.ConfigCreateOrUpdateReq) bson.M {
 	conf := req.GetConfig()
 
 	// 基础字段 - 只更新非零值
-	if conf.GetType() != 0 {
-		setUpdate["type"] = conf.GetType()
+	if conf.GetType() != "" {
+		if configType, ok := enum.ParseConfigType(conf.GetType()); ok {
+			setUpdate["type"] = configType
+		}
 	}
-	if conf.GetStatus() != 0 {
-		setUpdate["status"] = conf.GetStatus()
+	if conf.GetStatus() != "" {
+		// 使用enum包验证和转换状态
+		if status, ok := enum.ParseStatus(conf.GetStatus()); ok {
+			setUpdate["status"] = status
+		}
 	}
 
-	// chat配置 - 使用点号语法部分更新
+	// chat配置
 	if chat := conf.GetChat(); chat != nil {
 		if chat.GetName() != "" {
 			setUpdate["chat.name"] = chat.GetName()
@@ -236,7 +251,7 @@ func extractUpdateBSON(req *profile.ConfigCreateOrUpdateReq) bson.M {
 		setUpdate["chat.updatetime"] = now
 	}
 
-	// tts配置 - 使用点号语法部分更新
+	// tts配置
 	if tts := conf.GetTts(); tts != nil {
 		if tts.GetName() != "" {
 			setUpdate["tts.name"] = tts.GetName()
@@ -253,7 +268,7 @@ func extractUpdateBSON(req *profile.ConfigCreateOrUpdateReq) bson.M {
 		setUpdate["tts.updatetime"] = now
 	}
 
-	// report配置 - 使用点号语法部分更新
+	// report配置
 	if report := conf.GetReport(); report != nil {
 		if report.GetName() != "" {
 			setUpdate["report.name"] = report.GetName()
@@ -278,9 +293,11 @@ func extractUpdateBSON(req *profile.ConfigCreateOrUpdateReq) bson.M {
 
 // 将数据库Config对象字段转化为DTO对象
 func adminConfig(configDAO *config.Config) *profile.Config {
+	t, _ := enum.GetConfigType(configDAO.Type)
+	st, _ := enum.GetStatus(configDAO.Status)
 	return &profile.Config{
 		UnitID: configDAO.UnitID.Hex(),
-		Type:   configDAO.Type,
+		Type:   t,
 
 		Chat: &profile.ChatApp{
 			Name:        configDAO.Chat.Name,
@@ -289,7 +306,7 @@ func adminConfig(configDAO *config.Config) *profile.Config {
 			AppId:       configDAO.Chat.AppID,
 		},
 
-		Tts: &profile.TtsApp{
+		Tts: &profile.TTSApp{
 			Name:        configDAO.TTS.Name,
 			Description: configDAO.TTS.Description,
 			Provider:    configDAO.TTS.Provider,
@@ -303,7 +320,7 @@ func adminConfig(configDAO *config.Config) *profile.Config {
 			AppId:       configDAO.Report.AppID,
 		},
 
-		Status:     configDAO.Status,
+		Status:     st,
 		CreateTime: configDAO.CreateTime,
 		UpdateTime: configDAO.UpdateTime,
 	}

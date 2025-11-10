@@ -14,8 +14,8 @@ var _ IConfigController = (*ConfigController)(nil)
 
 type IConfigController interface {
 	ConfigCreate(ctx context.Context, req *profile.ConfigCreateOrUpdateReq) (resp *basic.Response, err error)
-	ConfigUpdate(ctx context.Context, req *profile.ConfigCreateOrUpdateReq) (resp *basic.Response, err error)
-	ConfigFindByUnitID(ctx context.Context, req *profile.ConfigGetByUnitIdReq) (resp *profile.ConfigGetByUnitIdResp, err error)
+	ConfigUpdateInfo(ctx context.Context, req *profile.ConfigCreateOrUpdateReq) (resp *basic.Response, err error)
+	ConfigGetByUnitID(ctx context.Context, req *profile.ConfigGetByUnitIdReq) (resp *profile.ConfigGetByUnitIdResp, err error)
 }
 
 type ConfigController struct {
@@ -32,12 +32,12 @@ func (c *ConfigController) ConfigCreate(ctx context.Context, req *profile.Config
 	return c.ConfigService.ConfigCreate(ctx, req)
 }
 
-func (c *ConfigController) ConfigUpdate(ctx context.Context, req *profile.ConfigCreateOrUpdateReq) (resp *basic.Response, err error) {
-	logs.Info("ConfigUpdate", req)
-	return c.ConfigService.ConfigUpdate(ctx, req)
+func (c *ConfigController) ConfigUpdateInfo(ctx context.Context, req *profile.ConfigCreateOrUpdateReq) (resp *basic.Response, err error) {
+	logs.Info("ConfigUpdateInfo", req)
+	return c.ConfigService.ConfigUpdateInfo(ctx, req)
 }
 
-func (c *ConfigController) ConfigFindByUnitID(ctx context.Context, req *profile.ConfigGetByUnitIdReq) (resp *profile.ConfigGetByUnitIdResp, err error) {
+func (c *ConfigController) ConfigGetByUnitID(ctx context.Context, req *profile.ConfigGetByUnitIdReq) (resp *profile.ConfigGetByUnitIdResp, err error) {
 	logs.Info("ConfigGetByUnitID", req)
 	return c.ConfigService.ConfigGetByUnitID(ctx, req)
 }
