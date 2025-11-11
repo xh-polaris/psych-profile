@@ -95,13 +95,13 @@ func (c *ConfigService) ConfigUpdateInfo(ctx context.Context, req *profile.Confi
 		return nil, errorx.New(errno.ErrNotAdmin)
 	}
 
-	// 存在性验证
-	confId, err := primitive.ObjectIDFromHex(req.Id)
+	// 参数校验
+	unitOid, err := primitive.ObjectIDFromHex(req.Config.UnitId)
 	if err != nil {
-		return nil, errorx.New(errno.ErrInvalidParams, errorx.KV("value", "配置ID"))
+		return nil, errorx.New(errno.ErrInvalidParams, errorx.KV("field", "单位ID"))
 	}
-
-	oldConf, err := c.ConfigMapper.FindOne(ctx, confId)
+	// 存在性验证
+	oldConf, err := c.ConfigMapper.FindOneByUnitID(ctx, unitOid)
 	if err != nil || oldConf == nil {
 		// 若不存在，当成create处理
 		return c.ConfigCreate(ctx, req)
@@ -111,7 +111,7 @@ func (c *ConfigService) ConfigUpdateInfo(ctx context.Context, req *profile.Confi
 	// 提取req中的非空字段，构造bson
 	update := extractUpdateBSON(req)
 
-	err = c.ConfigMapper.UpdateField(ctx, confId, update)
+	err = c.ConfigMapper.UpdateField(ctx, oldConf.ID, update)
 	if err != nil {
 		logs.Errorf("update config error: %s", errorx.ErrorWithoutStack(err))
 		return nil, err
