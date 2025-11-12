@@ -34,14 +34,6 @@ var ConfigServiceSet = wire.NewSet(
 )
 
 func (c *ConfigService) ConfigCreate(ctx context.Context, req *profile.ConfigCreateOrUpdateReq) (resp *basic.Response, err error) {
-	// 鉴权
-	if !req.Admin {
-		return nil, errorx.New(errno.ErrNotAdmin)
-	}
-	// 参数存在性校验
-	if err = validateCreateConfigReq(req); err != nil {
-		return nil, err
-	}
 	// 参数合法性校验
 	unitOID, err := primitive.ObjectIDFromHex(req.Config.UnitId)
 	if err != nil {
@@ -152,7 +144,7 @@ func (c *ConfigService) ConfigGetByUnitID(ctx context.Context, req *profile.Conf
 	return nil, errorx.New(errno.ErrInternalError)
 }
 
-func validateCreateConfigReq(req *profile.ConfigCreateOrUpdateReq) error {
+func validateCreateConfigReq(req *profile.ConfigCreateOrUpdateReq) error { // Deprecated
 	if req.Config == nil {
 		return errorx.New(errno.ErrMissingParams, errorx.KV("field", "配置内容"))
 	}
