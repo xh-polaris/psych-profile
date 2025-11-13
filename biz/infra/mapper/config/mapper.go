@@ -22,7 +22,7 @@ type IMongoMapper interface {
 	FindOne(ctx context.Context, id primitive.ObjectID) (*Config, error) // 继承模板类
 	FindOneByUnitID(ctx context.Context, unitID primitive.ObjectID) (*Config, error)
 	Insert(ctx context.Context, unit *Config) error
-	UpdateField(ctx context.Context, id primitive.ObjectID, update bson.M) error
+	UpdateFields(ctx context.Context, id primitive.ObjectID, update bson.M) error
 }
 
 type mongoMapper struct {
@@ -39,5 +39,5 @@ func NewMongoMapper(config *config.Config) IMongoMapper {
 }
 
 func (m *mongoMapper) FindOneByUnitID(ctx context.Context, unitID primitive.ObjectID) (*Config, error) {
-	return m.FindOneByField(ctx, cst.UnitID, unitID)
+	return m.FindOneByFields(ctx, bson.M{cst.UnitID: unitID})
 }

@@ -111,7 +111,7 @@ func (c *ConfigService) ConfigUpdateInfo(ctx context.Context, req *profile.Confi
 	// 提取req中的非空字段，构造bson
 	update := extractUpdateBSON(req)
 
-	err = c.ConfigMapper.UpdateField(ctx, oldConf.ID, update)
+	err = c.ConfigMapper.UpdateFields(ctx, oldConf.ID, update)
 	if err != nil {
 		logs.Errorf("update config error: %s", errorx.ErrorWithoutStack(err))
 		return nil, err
