@@ -44,7 +44,7 @@ func (m *mongoMapper[T]) FindOne(ctx context.Context, id primitive.ObjectID) (*T
 // FindAllByFields 根据字段查询所有实体
 func (m *mongoMapper[T]) FindAllByFields(ctx context.Context, filter bson.M) ([]*T, error) {
 	var result []*T
-	if err := m.conn.Model.Find(ctx, &result, filter); err != nil { // monc 本身没有提供不带缓存查找所有的方法
+	if err := m.conn.Find(ctx, &result, filter); err != nil {
 		return nil, err
 	}
 	return result, nil
