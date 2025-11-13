@@ -16,6 +16,7 @@ const (
 	Class      = "class"
 	Address    = "address"
 	Contact    = "contact"
+	Options    = "options"
 	CreateTime = "createTime"
 	UpdateTime = "updateTime"
 	DeleteTime = "deleteTime"

@@ -234,9 +234,9 @@ func (u *UserService) UserGetInfo(ctx context.Context, req *profile.UserGetInfoR
 		return nil, errorx.New(errno.ErrInternalError)
 	}
 
-	optionsAny, ok := convert.OptionsToAny(userDAO.Options)
-	if !ok {
-		return nil, errorx.New(errno.ErrInternalError)
+	optionsAny, err := convert.Any2Anypb(userDAO.Options)
+	if err != nil {
+		return nil, err
 	}
 
 	return &profile.UserGetInfoResp{
@@ -298,7 +298,13 @@ func (u *UserService) UserUpdateInfo(ctx context.Context, req *profile.UserUpdat
 	if req.User.Grade != 0 {
 		update[cst.Grade] = req.User.Grade
 	}
-	// TODO: Options
+	if req.User.Options != nil {
+		optionsAnypb, err := convert.Anypb2Any(req.User.Options)
+		if err != nil {
+			return nil, err
+		}
+		update[cst.Options] = optionsAnypb
+	}
 
 	update[cst.UpdateTime] = time.Now().Unix()
 
