@@ -4,17 +4,26 @@ import "regexp"
 
 // CheckMobile 检验手机号
 func CheckMobile(phone string) bool {
-	// 匹配规则
-	// ^1第一位为一
-	// [345789]{1} 后接一位345789 的数字
-	// \\d \d的转义 表示数字 {9} 接9位
-	// $ 结束符
-	regRuler := "^1[345789]{1}\\d{9}$" // TODO: 支持别的区号
+	if len(phone) == 0 {
+		return false
+	}
 
-	// 正则调用规则
-	reg := regexp.MustCompile(regRuler)
+	// 国内手机号规则
+	domesticPattern := "^1[345789]\\d{9}$"
 
-	// 返回 MatchString 是否匹配
+	// 国际手机号规则: +开头，后面跟 6-15 位数字
+	// 这里假设国际手机号总长度 7~16 位（包括 +）
+	internationalPattern := "^\\+\\d{6,15}$"
+
+	var reg *regexp.Regexp
+
+	if phone[0] == '1' {
+		reg = regexp.MustCompile(domesticPattern)
+	} else if phone[0] == '+' {
+		reg = regexp.MustCompile(internationalPattern)
+	} else {
+		return false
+	}
+
 	return reg.MatchString(phone)
-
 }

@@ -24,9 +24,6 @@ const (
 
 // 前端字段相关
 const (
-	// TODO: studentId和Phone都是Code
-	AuthTypePhonePassword = "phone-password"
-	AuthTypePhoneCode     = "phone-code"
-	AuthTypePassword      = "password"
-	AuthTypeCode          = "code"
+	AuthTypePassword = "password"
+	AuthTypeCode     = "code"
 )

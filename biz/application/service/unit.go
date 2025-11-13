@@ -128,10 +128,10 @@ func (u *UnitService) UnitSignIn(ctx context.Context, req *profile.UnitSignInReq
 	if req.AuthType == "" {
 		return nil, errorx.New(errno.ErrMissingParams, errorx.KV("field", "验证方式"))
 	}
-	if req.AuthValue == "" && req.AuthType == cst.AuthTypePhonePassword {
+	if req.AuthValue == "" && req.AuthType == cst.AuthTypePassword {
 		return nil, errorx.New(errno.ErrMissingParams, errorx.KV("field", "密码"))
 	}
-	if req.AuthValue == "" && req.AuthType == cst.AuthTypePhoneCode {
+	if req.AuthValue == "" && req.AuthType == cst.AuthTypeCode {
 		return nil, errorx.New(errno.ErrMissingParams, errorx.KV("field", "验证码"))
 	}
 
@@ -144,7 +144,7 @@ func (u *UnitService) UnitSignIn(ctx context.Context, req *profile.UnitSignInReq
 	unitDAO := &unit.Unit{}
 	switch req.AuthType {
 	// 密码登录
-	case cst.AuthTypePhonePassword:
+	case cst.AuthTypePassword:
 		// 获得用户
 		unitDAO, err = u.UnitMapper.FindOneByPhone(ctx, req.AuthId)
 		if err != nil {
@@ -159,7 +159,7 @@ func (u *UnitService) UnitSignIn(ctx context.Context, req *profile.UnitSignInReq
 			return nil, errorx.New(errno.ErrWrongAccountOrPassword)
 		}
 	// 验证码登录
-	case cst.AuthTypePhoneCode:
+	case cst.AuthTypeCode:
 		return nil, errorx.New(errno.ErrUnImplement) // TODO: 验证码登录
 	}
 
