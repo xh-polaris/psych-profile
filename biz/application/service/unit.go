@@ -29,7 +29,7 @@ type IUnitService interface {
 	UnitUpdateInfo(ctx context.Context, req *profile.UnitUpdateInfoReq) (*basic.Response, error)
 	UnitUpdatePassword(ctx context.Context, req *profile.UnitUpdatePasswordReq) (*basic.Response, error)
 	UnitLinkUser(ctx context.Context, req *profile.UnitLinkUserReq) (*basic.Response, error)
-	UnitCreateAndLinkUser(ctx context.Context, req *profile.UnitCreateAndLinkUserReq) (*basic.Response, error)
+	UnitCreateAndLinkUser(ctx context.Context, req *profile.UnitCreateAndLinkUserReq) (*profile.UnitCreateAndLinkUserResp, error)
 }
 
 type UnitService struct {
@@ -64,12 +64,6 @@ func (u *UnitService) UnitSignUp(ctx context.Context, req *profile.UnitSignUpReq
 
 	// 检查手机号是否已注册
 	if exists, err := u.UnitMapper.ExistsByPhone(ctx, req.Unit.Phone); err != nil {
-		logs.Errorf("check phone exists error: %s", errorx.ErrorWithoutStack(err))
-		return nil, err
-	} else if exists {
-		return nil, errorx.New(errno.ErrPhoneAlreadyExist)
-	}
-	if exists, err := u.UserMapper.ExistsByPhone(ctx, req.Unit.Phone); err != nil {
 		logs.Errorf("check phone exists error: %s", errorx.ErrorWithoutStack(err))
 		return nil, err
 	} else if exists {
@@ -244,7 +238,7 @@ func (u *UnitService) UnitUpdateInfo(ctx context.Context, req *profile.UnitUpdat
 
 	// 一次更新所有字段
 	if len(update) > 0 {
-		if err = u.UnitMapper.UpdateField(ctx, unitId, update); err != nil {
+		if err = u.UnitMapper.UpdateFields(ctx, unitId, update); err != nil {
 			logs.Errorf("update unit error: %s", errorx.ErrorWithoutStack(err))
 			return nil, err
 		}
@@ -262,10 +256,10 @@ func (u *UnitService) UnitUpdatePassword(ctx context.Context, req *profile.UnitU
 	if req.AuthType == "" {
 		return nil, errorx.New(errno.ErrMissingParams, errorx.KV("field", "验证方式"))
 	}
-	if req.AuthValue == "" && req.AuthType == cst.AuthTypePhonePassword {
+	if req.AuthValue == "" && req.AuthType == cst.AuthTypePassword {
 		return nil, errorx.New(errno.ErrMissingParams, errorx.KV("field", "旧密码"))
 	}
-	if req.AuthValue == "" && req.AuthType == cst.AuthTypePhoneCode {
+	if req.AuthValue == "" && req.AuthType == cst.AuthTypeCode {
 		return nil, errorx.New(errno.ErrMissingParams, errorx.KV("field", "验证码"))
 	}
 	if req.NewPassword == "" {
@@ -285,7 +279,7 @@ func (u *UnitService) UnitUpdatePassword(ctx context.Context, req *profile.UnitU
 	case cst.AuthTypeCode:
 		return nil, errorx.New(errno.ErrUnImplement) // TODO: 验证码登录
 	// 密码
-	case cst.AuthTypeOldPassword:
+	case cst.AuthTypePassword:
 		// 获取密码
 		unitDAO, err = u.UnitMapper.FindOne(ctx, unitId)
 		if err != nil {
@@ -305,7 +299,7 @@ func (u *UnitService) UnitUpdatePassword(ctx context.Context, req *profile.UnitU
 	}
 
 	// 更新密码
-	if err = u.UnitMapper.UpdateField(ctx, unitDAO.ID, bson.M{
+	if err = u.UnitMapper.UpdateFields(ctx, unitDAO.ID, bson.M{
 		cst.Password:   newPwd,
 		cst.UpdateTime: time.Now().Unix(),
 	}); err != nil {
@@ -339,7 +333,7 @@ func (u *UnitService) UnitLinkUser(ctx context.Context, req *profile.UnitLinkUse
 	}
 
 	// 绑定用户
-	if err := u.UserMapper.UpdateField(ctx, userId, bson.M{cst.UnitID: unitId}); err != nil {
+	if err := u.UserMapper.UpdateFields(ctx, userId, bson.M{cst.UnitID: unitId}); err != nil {
 		logs.Errorf("update user error: %s", errorx.ErrorWithoutStack(err))
 		return nil, err
 	}
@@ -347,7 +341,7 @@ func (u *UnitService) UnitLinkUser(ctx context.Context, req *profile.UnitLinkUse
 	return &basic.Response{}, nil
 }
 
-func (u *UnitService) UnitCreateAndLinkUser(ctx context.Context, req *profile.UnitCreateAndLinkUserReq) (*basic.Response, error) {
+func (u *UnitService) UnitCreateAndLinkUser(ctx context.Context, req *profile.UnitCreateAndLinkUserReq) (*profile.UnitCreateAndLinkUserResp, error) {
 	// 参数校验
 	if req.UnitId == "" {
 		return nil, errorx.New(errno.ErrMissingParams, errorx.KV("field", "单位ID"))
@@ -365,8 +359,33 @@ func (u *UnitService) UnitCreateAndLinkUser(ctx context.Context, req *profile.Un
 		return nil, errorx.New(errno.ErrInvalidParams, errorx.KV("field", "验证方式"))
 	}
 
+	// 转换ID
+	unitId, err := primitive.ObjectIDFromHex(req.UnitId)
+	if err != nil {
+		logs.Errorf("parse unit id error: %s", errorx.ErrorWithoutStack(err))
+		return nil, err
+	}
+
 	// 验证方式标记
 	isCodeTypePhone := codeType == enum.CodeTypePhone
+
+	// 找出所有属于这个单位的用户
+	users, err := u.UserMapper.FindAllByUnitID(ctx, unitId)
+	if err != nil {
+		logs.Errorf("find users by unit id error: %s", errorx.ErrorWithoutStack(err))
+		return nil, err
+	}
+
+	// 创建一个map用于快速查找已存在的用户code
+	existingCodes := make(map[string]bool)
+	for _, userDAO := range users {
+		existingCodes[userDAO.Code] = true
+	}
+
+	// 记录需要插入的用户数量、成功数量和跳过数量
+	all := len(req.Users)
+	success := 0
+	skip := 0
 
 	// 插入用户
 	for _, userReq := range req.Users {
@@ -384,32 +403,37 @@ func (u *UnitService) UnitCreateAndLinkUser(ctx context.Context, req *profile.Un
 			return nil, errorx.New(errno.ErrMissingParams, errorx.KV("field", "密码"))
 		}
 
+		// 检查是否已存在相同的code
+		if existingCodes[userReq.Code] {
+			// 如果在这个unit中已经存在该code，则跳过
+			skip++
+			continue
+		}
+
 		if isCodeTypePhone {
+			// 检查同一Unit下手机号是否已注册
+			if exists, err := u.UserMapper.ExistsByCodeAndUnitID(ctx, userReq.Code, unitId); err != nil {
+				logs.Errorf("check phone exists in unit error: %s", errorx.ErrorWithoutStack(err))
+				return nil, err
+			} else if exists {
+				// 如果在这个unit中已经存在该手机号，则跳过
+				skip++
+				continue
+			}
+
 			// 如果说验证方式是手机，则需要检测手机号的格式
 			if !reg.CheckMobile(userReq.Code) {
 				return nil, errorx.New(errno.ErrInvalidParams, errorx.KV("field", "手机号"))
 			}
-
-			// 检查手机号是否已注册
-			if exists, err := u.UnitMapper.ExistsByPhone(ctx, userReq.Code); err != nil {
-				logs.Errorf("check phone exists error: %s", errorx.ErrorWithoutStack(err))
-				return nil, err
-			} else if exists {
-				return nil, errorx.New(errno.ErrPhoneAlreadyExist)
-			}
-			if exists, err := u.UserMapper.ExistsByPhone(ctx, userReq.Code); err != nil {
-				logs.Errorf("check phone exists error: %s", errorx.ErrorWithoutStack(err))
-				return nil, err
-			} else if exists {
-				return nil, errorx.New(errno.ErrPhoneAlreadyExist)
-			}
 		} else {
-			// 检查学号是否已注册
-			if exists, err := u.UserMapper.ExistsByStudentID(ctx, userReq.Code); err != nil {
-				logs.Errorf("check student id exists error: %s", errorx.ErrorWithoutStack(err))
+			// 检查同一Unit下学号是否已注册
+			if exists, err := u.UserMapper.ExistsByCodeAndUnitID(ctx, userReq.Code, unitId); err != nil {
+				logs.Errorf("check student id exists in unit error: %s", errorx.ErrorWithoutStack(err))
 				return nil, err
 			} else if exists {
-				return nil, errorx.New(errno.ErrStudentIDAlreadyExist)
+				// 如果在这个unit中已经存在该学号，则跳过
+				skip++
+				continue
 			}
 		}
 
@@ -428,16 +452,6 @@ func (u *UnitService) UnitCreateAndLinkUser(ctx context.Context, req *profile.Un
 		codeType, ok := enum.ParseCodeType(req.CodeType)
 		if !ok {
 			return nil, errorx.New(errno.ErrInvalidParams, errorx.KV("field", "验证方式"))
-		}
-
-		// 转换ID
-		var unitId primitive.ObjectID
-		if req.UnitId != "" {
-			unitId, err = primitive.ObjectIDFromHex(req.UnitId)
-			if err != nil {
-				logs.Errorf("parse unit id error: %s", errorx.ErrorWithoutStack(err))
-				return nil, err
-			}
 		}
 
 		// 构造用户
@@ -463,7 +477,17 @@ func (u *UnitService) UnitCreateAndLinkUser(ctx context.Context, req *profile.Un
 			logs.Errorf("insert user error: %s", errorx.ErrorWithoutStack(err))
 			return nil, err
 		}
+
+		// 添加到existingCodes map中，避免后续重复创建
+		existingCodes[userReq.Code] = true
+
+		// 添加成功数量
+		success++
 	}
 
-	return &basic.Response{}, nil
+	return &profile.UnitCreateAndLinkUserResp{
+		AllCount:     int32(all),
+		SuccessCount: int32(success),
+		SkipCount:    int32(skip),
+	}, nil
 }

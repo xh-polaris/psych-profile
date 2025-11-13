@@ -19,14 +19,14 @@ const (
 )
 
 type IMongoMapper interface {
-	FindOneByPhone(ctx context.Context, phone string) (*User, error)
-	FindOneByStudentID(ctx context.Context, studentId string) (*User, error)
-	FindOneByAccount(ctx context.Context, account string) (*User, error)
+	FindOneByCode(ctx context.Context, phone string) (*User, error)
+	FindOneByCodeAndUnitID(ctx context.Context, phone string, unitId primitive.ObjectID) (*User, error)
 	FindOne(ctx context.Context, id primitive.ObjectID) (*User, error)
 	Insert(ctx context.Context, user *User) error
-	UpdateField(ctx context.Context, id primitive.ObjectID, update bson.M) error
-	ExistsByPhone(ctx context.Context, phone string) (bool, error)
-	ExistsByStudentID(ctx context.Context, studentId string) (bool, error)
+	UpdateFields(ctx context.Context, id primitive.ObjectID, update bson.M) error
+	ExistsByCode(ctx context.Context, phone string) (bool, error)
+	ExistsByCodeAndUnitID(ctx context.Context, code string, unitID primitive.ObjectID) (bool, error)
+	FindAllByUnitID(ctx context.Context, unitId primitive.ObjectID) ([]*User, error)
 }
 
 type mongoMapper struct {
@@ -42,27 +42,27 @@ func NewMongoMapper(config *config.Config) IMongoMapper {
 	}
 }
 
-// FindOneByPhone 根据电话号码查询用户
-func (m *mongoMapper) FindOneByPhone(ctx context.Context, phone string) (*User, error) {
-	return m.FindOneByField(ctx, cst.Code, phone)
+// FindOneByCode 根据电话号码或学号查询用户
+func (m *mongoMapper) FindOneByCode(ctx context.Context, code string) (*User, error) {
+	return m.FindOneByFields(ctx, bson.M{cst.Code: code})
 }
 
-// FindOneByStudentID 根据学号查询用户
-func (m *mongoMapper) FindOneByStudentID(ctx context.Context, studentId string) (*User, error) {
-	return m.FindOneByField(ctx, cst.Code, studentId)
+// FindOneByCodeAndUnitID 根据电话号码和UnitID查询用户
+func (m *mongoMapper) FindOneByCodeAndUnitID(ctx context.Context, code string, unitId primitive.ObjectID) (*User, error) {
+	return m.FindOneByFields(ctx, bson.M{cst.Code: code, cst.UnitID: unitId})
 }
 
-// FindOneByAccount 根据账号查询用户
-func (m *mongoMapper) FindOneByAccount(ctx context.Context, account string) (*User, error) {
-	return m.FindOneByField(ctx, cst.Code, account)
+// ExistsByCode 根据电话号码或学号查询用户是否存在
+func (m *mongoMapper) ExistsByCode(ctx context.Context, code string) (bool, error) {
+	return m.ExistsByFields(ctx, bson.M{cst.Code: code})
 }
 
-// ExistsByPhone 根据电话号码查询用户是否存在
-func (m *mongoMapper) ExistsByPhone(ctx context.Context, phone string) (bool, error) {
-	return m.ExistsByField(ctx, cst.Code, phone)
+// ExistsByCodeAndUnitID 根据电话号码和UnitID查询用户是否存在
+func (m *mongoMapper) ExistsByCodeAndUnitID(ctx context.Context, code string, unitID primitive.ObjectID) (bool, error) {
+	return m.ExistsByFields(ctx, bson.M{cst.Code: code, cst.UnitID: unitID})
 }
 
-// ExistsByStudentID 根据学号查询用户是否存在
-func (m *mongoMapper) ExistsByStudentID(ctx context.Context, studentId string) (bool, error) {
-	return m.ExistsByField(ctx, cst.Code, studentId)
+// FindAllByUnitID 根据UnitID查询所有用户
+func (m *mongoMapper) FindAllByUnitID(ctx context.Context, unitId primitive.ObjectID) ([]*User, error) {
+	return m.FindAllByFields(ctx, bson.M{cst.UnitID: unitId})
 }

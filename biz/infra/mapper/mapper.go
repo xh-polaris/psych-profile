@@ -11,11 +11,12 @@ import (
 )
 
 type IMongoMapper[T any] interface {
-	FindOneByField(ctx context.Context, field string, value any) (*T, error)
+	FindOneByFields(ctx context.Context, filter bson.M) (*T, error)
 	FindOne(ctx context.Context, id primitive.ObjectID) (*T, error)
+	FindAllByFields(ctx context.Context, filter bson.M) ([]*T, error)
 	Insert(ctx context.Context, data *T) error
-	UpdateField(ctx context.Context, id primitive.ObjectID, update bson.M) error
-	ExistsByField(ctx context.Context, field string, value any) (bool, error)
+	UpdateFields(ctx context.Context, id primitive.ObjectID, update bson.M) error
+	ExistsByFields(ctx context.Context, filter bson.M) (bool, error)
 }
 
 type mongoMapper[T any] struct {
@@ -26,10 +27,10 @@ func NewMongoMapper[T any](conn *monc.Model) IMongoMapper[T] {
 	return &mongoMapper[T]{conn: conn}
 }
 
-// FindOneByField 根据字段查询实体
-func (m *mongoMapper[T]) FindOneByField(ctx context.Context, field string, value any) (*T, error) {
+// FindOneByFields 根据字段查询实体
+func (m *mongoMapper[T]) FindOneByFields(ctx context.Context, filter bson.M) (*T, error) {
 	result := new(T)
-	if err := m.conn.FindOneNoCache(ctx, result, bson.M{field: value}); err != nil {
+	if err := m.conn.FindOneNoCache(ctx, result, filter); err != nil {
 		return nil, err
 	}
 	return result, nil
@@ -37,7 +38,16 @@ func (m *mongoMapper[T]) FindOneByField(ctx context.Context, field string, value
 
 // FindOne 根据ID查询实体
 func (m *mongoMapper[T]) FindOne(ctx context.Context, id primitive.ObjectID) (*T, error) {
-	return m.FindOneByField(ctx, cst.ID, id)
+	return m.FindOneByFields(ctx, bson.M{cst.ID: id})
+}
+
+// FindAllByFields 根据字段查询所有实体
+func (m *mongoMapper[T]) FindAllByFields(ctx context.Context, filter bson.M) ([]*T, error) {
+	var result []*T
+	if err := m.conn.Model.Find(ctx, &result, filter); err != nil { // monc 本身没有提供不带缓存查找所有的方法
+		return nil, err
+	}
+	return result, nil
 }
 
 // Insert 插入实体
@@ -46,14 +56,14 @@ func (m *mongoMapper[T]) Insert(ctx context.Context, data *T) error {
 	return err
 }
 
-// UpdateField 更新字段
-func (m *mongoMapper[T]) UpdateField(ctx context.Context, id primitive.ObjectID, update bson.M) error {
+// UpdateFields 更新字段
+func (m *mongoMapper[T]) UpdateFields(ctx context.Context, id primitive.ObjectID, update bson.M) error {
 	_, err := m.conn.UpdateOneNoCache(ctx, bson.M{cst.ID: id}, bson.M{"$set": update})
 	return err
 }
 
-// ExistsByField 根据字段查询是否存在实体
-func (m *mongoMapper[T]) ExistsByField(ctx context.Context, field string, value any) (bool, error) {
-	count, err := m.conn.CountDocuments(ctx, bson.M{field: value})
+// ExistsByFields 根据字段查询是否存在实体
+func (m *mongoMapper[T]) ExistsByFields(ctx context.Context, filter bson.M) (bool, error) {
+	count, err := m.conn.CountDocuments(ctx, filter)
 	return count > 0, err
 }

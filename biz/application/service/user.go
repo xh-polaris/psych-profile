@@ -41,6 +41,7 @@ var UserServiceSet = wire.NewSet(
 	wire.Bind(new(IUserService), new(*UserService)),
 )
 
+// UserSignUp 用户不能直接注册 即使注册也需要绑定unitId
 func (u *UserService) UserSignUp(ctx context.Context, req *profile.UserSignUpReq) (*profile.UserSignUpResp, error) {
 	// 默认用户通过注册接口，使用手机号注册
 	// 参数校验
@@ -63,7 +64,7 @@ func (u *UserService) UserSignUp(ctx context.Context, req *profile.UserSignUpReq
 	}
 
 	// 检查手机号是否已注册
-	if exists, err := u.UserMapper.ExistsByPhone(ctx, req.User.Code); err != nil {
+	if exists, err := u.UserMapper.ExistsByCode(ctx, req.User.Code); err != nil {
 		logs.Errorf("check phone exists error: %s", errorx.ErrorWithoutStack(err))
 		return nil, err
 	} else if exists {
@@ -155,108 +156,47 @@ func (u *UserService) UserSignIn(ctx context.Context, req *profile.UserSignInReq
 	if req.AuthType == "" {
 		return nil, errorx.New(errno.ErrMissingParams, errorx.KV("field", "登录方式"))
 	}
-
-	var strong bool // 强密码
-	var err error
-	userDAO := &user.User{}
-
+	if req.AuthId == "" {
+		return nil, errorx.New(errno.ErrMissingParams, errorx.KV("field", "账号"))
+	}
+	if req.UnitId == "" {
+		return nil, errorx.New(errno.ErrMissingParams, errorx.KV("field", "单位ID"))
+	}
 	switch req.AuthType {
-	// 手机号密码登录
-	case cst.AuthTypePhonePassword:
-		if req.AuthId == "" {
-			return nil, errorx.New(errno.ErrMissingParams, errorx.KV("field", "手机号"))
-		}
+	case cst.AuthTypeCode:
+		return nil, errorx.New(errno.ErrUnImplement) // TODO: 验证码登录
+	case cst.AuthTypePassword:
 		if req.AuthValue == "" {
 			return nil, errorx.New(errno.ErrMissingParams, errorx.KV("field", "密码"))
 		}
-		if !reg.CheckMobile(req.AuthId) {
-			return nil, errorx.New(errno.ErrInvalidParams, errorx.KV("field", "电话号码"))
-		}
+	default:
+		return nil, errorx.New(errno.ErrInvalidParams, errorx.KV("field", "登录方式"))
+	}
 
-		// 获得用户
-		if userDAO, err = u.UserMapper.FindOneByPhone(ctx, req.AuthId); err != nil {
-			logs.Errorf("find user by phone error: %s", errorx.ErrorWithoutStack(err))
-			return nil, err
-		} else if userDAO == nil {
-			return nil, errorx.New(errno.ErrWrongAccountOrPassword)
-		}
+	unitId, err := primitive.ObjectIDFromHex(req.UnitId)
+	if err != nil {
+		logs.Errorf("parse unit id error: %s", errorx.ErrorWithoutStack(err))
+		return nil, err
+	}
 
-		// 密码验证
-		if !encrypt.BcryptCheck(req.AuthValue, userDAO.Password) {
-			return nil, errorx.New(errno.ErrWrongAccountOrPassword)
-		}
+	// 获得用户
+	userDAO, err := u.UserMapper.FindOneByCodeAndUnitID(ctx, req.AuthId, unitId)
+	if err != nil {
+		logs.Errorf("find user by code and unit id error: %s", errorx.ErrorWithoutStack(err))
+		return nil, err
+	}
+	if userDAO == nil {
+		return nil, errorx.New(errno.ErrWrongAccountOrPassword)
+	}
 
-		strong = true
-
-	// 手机号验证码登录
-	case cst.AuthTypePhoneCode:
-		if req.AuthId == "" {
-			return nil, errorx.New(errno.ErrMissingParams, errorx.KV("field", "手机号"))
-		}
-		if req.AuthValue == "" {
-			return nil, errorx.New(errno.ErrMissingParams, errorx.KV("field", "验证码"))
-		}
-		if !reg.CheckMobile(req.AuthId) {
-			return nil, errorx.New(errno.ErrInvalidParams, errorx.KV("field", "电话号码"))
-		}
-
-		strong = true
-
-		return nil, errorx.New(errno.ErrUnImplement) // TODO: 验证码
-
-	// 学号密码登录
-	case cst.AuthTypeStudentIDPassword:
-		if req.AuthId == "" {
-			return nil, errorx.New(errno.ErrMissingParams, errorx.KV("field", "学号"))
-		}
-		if req.AuthValue == "" {
-			return nil, errorx.New(errno.ErrMissingParams, errorx.KV("field", "密码"))
-		}
-
-		// 获得用户
-		if userDAO, err := u.UserMapper.FindOneByStudentID(ctx, req.AuthId); err != nil {
-			logs.Errorf("find user by studentId error: %s", errorx.ErrorWithoutStack(err))
-			return nil, err
-		} else if userDAO == nil {
-			return nil, errorx.New(errno.ErrWrongAccountOrPassword)
-		}
-
-		// 密码验证
-		if !encrypt.BcryptCheck(req.AuthValue, userDAO.Password) {
-			return nil, errorx.New(errno.ErrWrongAccountOrPassword)
-		}
-
-		strong = true
-
-	// 弱验证登录
-	case cst.AuthTypeWeakAuth:
-		if req.AuthId == "" {
-			return nil, errorx.New(errno.ErrMissingParams, errorx.KV("field", "账号"))
-		}
-		if req.AuthValue == "" {
-			return nil, errorx.New(errno.ErrMissingParams, errorx.KV("field", "密码"))
-		}
-
-		// 获得用户
-		if userDAO, err := u.UserMapper.FindOneByAccount(ctx, req.AuthId); err != nil {
-			logs.Errorf("find user by account error: %s", errorx.ErrorWithoutStack(err))
-			return nil, err
-		} else if userDAO == nil {
-			return nil, errorx.New(errno.ErrWrongAccountOrPassword)
-		}
-
-		// 密码验证
-		if !encrypt.BcryptCheck(req.AuthValue, userDAO.Password) {
-			return nil, errorx.New(errno.ErrWrongAccountOrPassword)
-		}
-
-		strong = false
+	// 密码验证
+	if !encrypt.BcryptCheck(req.AuthValue, userDAO.Password) {
+		return nil, errorx.New(errno.ErrWrongAccountOrPassword)
 	}
 
 	return &profile.UserSignInResp{
 		UnitId: userDAO.UnitID.Hex(),
 		UserId: userDAO.ID.Hex(),
-		Strong: strong,
 	}, nil
 }
 
@@ -364,7 +304,7 @@ func (u *UserService) UserUpdateInfo(ctx context.Context, req *profile.UserUpdat
 
 	// 一次更新所有字段
 	if len(update) > 0 {
-		if err = u.UserMapper.UpdateField(ctx, userId, update); err != nil {
+		if err = u.UserMapper.UpdateFields(ctx, userId, update); err != nil {
 			logs.Errorf("update user error: %s", errorx.ErrorWithoutStack(err))
 			return nil, err
 		}
@@ -382,10 +322,10 @@ func (u *UserService) UserUpdatePassword(ctx context.Context, req *profile.UserU
 	if req.AuthType == "" {
 		return nil, errorx.New(errno.ErrMissingParams, errorx.KV("field", "验证方式"))
 	}
-	if req.AuthValue == "" && req.AuthType == cst.AuthTypePhonePassword {
+	if req.AuthValue == "" && req.AuthType == cst.AuthTypePassword {
 		return nil, errorx.New(errno.ErrMissingParams, errorx.KV("field", "旧密码"))
 	}
-	if req.AuthValue == "" && req.AuthType == cst.AuthTypePhoneCode {
+	if req.AuthValue == "" && req.AuthType == cst.AuthTypeCode {
 		return nil, errorx.New(errno.ErrMissingParams, errorx.KV("field", "验证码"))
 	}
 	if req.NewPassword == "" {
@@ -405,7 +345,7 @@ func (u *UserService) UserUpdatePassword(ctx context.Context, req *profile.UserU
 	case cst.AuthTypeCode:
 		return nil, errorx.New(errno.ErrUnImplement) // TODO: 验证码登录
 	// 密码
-	case cst.AuthTypeOldPassword:
+	case cst.AuthTypePassword:
 		// 获取密码
 		userDAO, err = u.UserMapper.FindOne(ctx, userId)
 		if err != nil {
@@ -425,7 +365,7 @@ func (u *UserService) UserUpdatePassword(ctx context.Context, req *profile.UserU
 	}
 
 	// 更新密码
-	if err = u.UserMapper.UpdateField(ctx, userDAO.ID, bson.M{
+	if err = u.UserMapper.UpdateFields(ctx, userDAO.ID, bson.M{
 		cst.Password:   newPwd,
 		cst.UpdateTime: time.Now().Unix(),
 	}); err != nil {
