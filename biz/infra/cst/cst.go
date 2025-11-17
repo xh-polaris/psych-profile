@@ -25,6 +25,6 @@ const (
 
 // 前端字段相关
 const (
-	AuthTypePassword = "password"
-	AuthTypeCode     = "code"
+	AuthTypePassword = 0
+	AuthTypeCode     = 1
 )

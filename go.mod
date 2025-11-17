@@ -7,7 +7,7 @@ require (
 	github.com/google/wire v0.7.0
 	github.com/kitex-contrib/obs-opentelemetry v0.2.3
 	github.com/xh-polaris/gopkg v0.0.0-20250312141711-7327267f4ea6
-	github.com/xh-polaris/psych-idl v0.0.0-20251113041533-eb2098875058
+	github.com/xh-polaris/psych-idl v0.0.0-20251117031854-542221a1fd51
 	github.com/zeromicro/go-zero v1.9.0
 	go.mongodb.org/mongo-driver v1.12.0
 	golang.org/x/crypto v0.41.0

@@ -153,9 +153,9 @@ func (u *UserService) UserSignUp(ctx context.Context, req *profile.UserSignUpReq
 
 func (u *UserService) UserSignIn(ctx context.Context, req *profile.UserSignInReq) (*profile.UserSignInResp, error) {
 	// 参数校验
-	if req.AuthType == "" {
-		return nil, errorx.New(errno.ErrMissingParams, errorx.KV("field", "登录方式"))
-	}
+	//if req.AuthType == "" {
+	//	return nil, errorx.New(errno.ErrMissingParams, errorx.KV("field", "登录方式"))
+	//}
 	if req.AuthId == "" {
 		return nil, errorx.New(errno.ErrMissingParams, errorx.KV("field", "账号"))
 	}
@@ -166,7 +166,7 @@ func (u *UserService) UserSignIn(ctx context.Context, req *profile.UserSignInReq
 	case cst.AuthTypeCode:
 		return nil, errorx.New(errno.ErrUnImplement) // TODO: 验证码登录
 	case cst.AuthTypePassword:
-		if req.AuthValue == "" {
+		if req.VerifyCode == "" {
 			return nil, errorx.New(errno.ErrMissingParams, errorx.KV("field", "密码"))
 		}
 	default:
@@ -190,13 +190,15 @@ func (u *UserService) UserSignIn(ctx context.Context, req *profile.UserSignInReq
 	}
 
 	// 密码验证
-	if !encrypt.BcryptCheck(req.AuthValue, userDAO.Password) {
+	if !encrypt.BcryptCheck(req.VerifyCode, userDAO.Password) {
 		return nil, errorx.New(errno.ErrWrongAccountOrPassword)
 	}
-
+	codeType, _ := enum.GetCodeType(userDAO.CodeType)
 	return &profile.UserSignInResp{
-		UnitId: userDAO.UnitID.Hex(),
-		UserId: userDAO.ID.Hex(),
+		UnitId:   userDAO.UnitID.Hex(),
+		UserId:   userDAO.ID.Hex(),
+		Code:     userDAO.Code,
+		CodeType: codeType,
 	}, nil
 }
 
@@ -325,13 +327,13 @@ func (u *UserService) UserUpdatePassword(ctx context.Context, req *profile.UserU
 	if req.Id == "" {
 		return nil, errorx.New(errno.ErrMissingParams, errorx.KV("field", "单位ID"))
 	}
-	if req.AuthType == "" {
-		return nil, errorx.New(errno.ErrMissingParams, errorx.KV("field", "验证方式"))
-	}
-	if req.AuthValue == "" && req.AuthType == cst.AuthTypePassword {
+	//if req.AuthType == "" {
+	//	return nil, errorx.New(errno.ErrMissingParams, errorx.KV("field", "验证方式"))
+	//}
+	if req.VerifyCode == "" && req.AuthType == cst.AuthTypePassword {
 		return nil, errorx.New(errno.ErrMissingParams, errorx.KV("field", "旧密码"))
 	}
-	if req.AuthValue == "" && req.AuthType == cst.AuthTypeCode {
+	if req.VerifyCode == "" && req.AuthType == cst.AuthTypeCode {
 		return nil, errorx.New(errno.ErrMissingParams, errorx.KV("field", "验证码"))
 	}
 	if req.NewPassword == "" {
@@ -358,7 +360,7 @@ func (u *UserService) UserUpdatePassword(ctx context.Context, req *profile.UserU
 			logs.Errorf("find user by phone error: %s", errorx.ErrorWithoutStack(err))
 			return nil, err
 		}
-		if !encrypt.BcryptCheck(req.AuthValue, userDAO.Password) {
+		if !encrypt.BcryptCheck(req.VerifyCode, userDAO.Password) {
 			return nil, errorx.New(errno.ErrWrongPassword)
 		}
 	}

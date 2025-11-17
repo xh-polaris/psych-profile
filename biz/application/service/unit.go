@@ -125,13 +125,13 @@ func (u *UnitService) UnitSignIn(ctx context.Context, req *profile.UnitSignInReq
 	if req.AuthId == "" {
 		return nil, errorx.New(errno.ErrMissingParams, errorx.KV("field", "电话号码"))
 	}
-	if req.AuthType == "" {
-		return nil, errorx.New(errno.ErrMissingParams, errorx.KV("field", "验证方式"))
-	}
-	if req.AuthValue == "" && req.AuthType == cst.AuthTypePassword {
+	//if req.AuthType == "" {
+	//	return nil, errorx.New(errno.ErrMissingParams, errorx.KV("field", "验证方式"))
+	//}
+	if req.VerifyCode == "" && req.AuthType == cst.AuthTypePassword {
 		return nil, errorx.New(errno.ErrMissingParams, errorx.KV("field", "密码"))
 	}
-	if req.AuthValue == "" && req.AuthType == cst.AuthTypeCode {
+	if req.VerifyCode == "" && req.AuthType == cst.AuthTypeCode {
 		return nil, errorx.New(errno.ErrMissingParams, errorx.KV("field", "验证码"))
 	}
 
@@ -155,7 +155,7 @@ func (u *UnitService) UnitSignIn(ctx context.Context, req *profile.UnitSignInReq
 		}
 
 		// 获得密码
-		if !encrypt.BcryptCheck(req.AuthValue, unitDAO.Password) {
+		if !encrypt.BcryptCheck(req.VerifyCode, unitDAO.Password) {
 			return nil, errorx.New(errno.ErrWrongAccountOrPassword)
 		}
 	// 验证码登录
@@ -253,13 +253,13 @@ func (u *UnitService) UnitUpdatePassword(ctx context.Context, req *profile.UnitU
 	if req.Id == "" {
 		return nil, errorx.New(errno.ErrMissingParams, errorx.KV("field", "单位ID"))
 	}
-	if req.AuthType == "" {
-		return nil, errorx.New(errno.ErrMissingParams, errorx.KV("field", "验证方式"))
-	}
-	if req.AuthValue == "" && req.AuthType == cst.AuthTypePassword {
+	//if req.AuthType == "" {
+	//	return nil, errorx.New(errno.ErrMissingParams, errorx.KV("field", "验证方式"))
+	//}
+	if req.VerifyCode == "" && req.AuthType == cst.AuthTypePassword {
 		return nil, errorx.New(errno.ErrMissingParams, errorx.KV("field", "旧密码"))
 	}
-	if req.AuthValue == "" && req.AuthType == cst.AuthTypeCode {
+	if req.VerifyCode == "" && req.AuthType == cst.AuthTypeCode {
 		return nil, errorx.New(errno.ErrMissingParams, errorx.KV("field", "验证码"))
 	}
 	if req.NewPassword == "" {
@@ -286,7 +286,7 @@ func (u *UnitService) UnitUpdatePassword(ctx context.Context, req *profile.UnitU
 			logs.Errorf("find unit by phone error: %s", errorx.ErrorWithoutStack(err))
 			return nil, err
 		}
-		if !encrypt.BcryptCheck(req.AuthValue, unitDAO.Password) {
+		if !encrypt.BcryptCheck(req.VerifyCode, unitDAO.Password) {
 			return nil, errorx.New(errno.ErrWrongPassword)
 		}
 	}
