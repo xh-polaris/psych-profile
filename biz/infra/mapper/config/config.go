@@ -16,6 +16,7 @@ type TTS struct {
 	Description string `json:"description,omitempty" bson:"description,omitempty"`
 	Provider    string `json:"provider,omitempty" bson:"provider,omitempty"`
 	AppID       string `json:"appId,omitempty" bson:"appId,omitempty"`
+	Speaker     string `json:"speaker,omitempty" bson:"speaker,omitempty"`
 }
 
 type Report struct {

@@ -61,6 +61,7 @@ func (c *ConfigService) ConfigCreate(ctx context.Context, req *profile.ConfigCre
 			Description: req.Config.Tts.Description,
 			Provider:    req.Config.Tts.Provider,
 			AppID:       req.Config.Tts.AppId,
+			Speaker:     req.Config.Tts.Speaker,
 		},
 		Report: &config.Report{
 			Name:        req.Config.Report.Name,
@@ -188,6 +189,9 @@ func validateCreateConfigReq(req *profile.ConfigCreateOrUpdateReq) error { // De
 		if req.Config.Tts.AppId == "" {
 			return errorx.New(errno.ErrMissingParams, errorx.KV("field", "TTS平台模型标识符"))
 		}
+		if req.Config.Tts.Speaker == "" {
+			return errorx.New(errno.ErrMissingParams, errorx.KV("field", "语音形象"))
+		}
 	}
 
 	// report配置
@@ -258,6 +262,9 @@ func extractUpdateBSON(req *profile.ConfigCreateOrUpdateReq) bson.M {
 		if tts.GetAppId() != "" {
 			setUpdate["tts.appid"] = tts.GetAppId()
 		}
+		if tts.GetSpeaker() != "" {
+			setUpdate["tts.speaker"] = tts.GetSpeaker()
+		}
 		setUpdate["tts.updatetime"] = now
 	}
 
@@ -304,6 +311,7 @@ func adminConfig(configDAO *config.Config) *profile.Config {
 			Description: configDAO.TTS.Description,
 			Provider:    configDAO.TTS.Provider,
 			AppId:       configDAO.TTS.AppID,
+			Speaker:     configDAO.TTS.Speaker,
 		},
 
 		Report: &profile.ReportApp{
