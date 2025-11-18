@@ -34,14 +34,6 @@ var ConfigServiceSet = wire.NewSet(
 )
 
 func (c *ConfigService) ConfigCreate(ctx context.Context, req *profile.ConfigCreateOrUpdateReq) (resp *basic.Response, err error) {
-	// 鉴权
-	if !req.Admin {
-		return nil, errorx.New(errno.ErrNotAdmin)
-	}
-	// 参数存在性校验
-	if err = validateCreateConfigReq(req); err != nil {
-		return nil, err
-	}
 	// 参数合法性校验
 	unitOID, err := primitive.ObjectIDFromHex(req.Config.UnitId)
 	if err != nil {
@@ -69,6 +61,7 @@ func (c *ConfigService) ConfigCreate(ctx context.Context, req *profile.ConfigCre
 			Description: req.Config.Tts.Description,
 			Provider:    req.Config.Tts.Provider,
 			AppID:       req.Config.Tts.AppId,
+			Speaker:     req.Config.Tts.Speaker,
 		},
 		Report: &config.Report{
 			Name:        req.Config.Report.Name,
@@ -152,7 +145,7 @@ func (c *ConfigService) ConfigGetByUnitID(ctx context.Context, req *profile.Conf
 	return nil, errorx.New(errno.ErrInternalError)
 }
 
-func validateCreateConfigReq(req *profile.ConfigCreateOrUpdateReq) error {
+func validateCreateConfigReq(req *profile.ConfigCreateOrUpdateReq) error { // Deprecated
 	if req.Config == nil {
 		return errorx.New(errno.ErrMissingParams, errorx.KV("field", "配置内容"))
 	}
@@ -195,6 +188,9 @@ func validateCreateConfigReq(req *profile.ConfigCreateOrUpdateReq) error {
 		}
 		if req.Config.Tts.AppId == "" {
 			return errorx.New(errno.ErrMissingParams, errorx.KV("field", "TTS平台模型标识符"))
+		}
+		if req.Config.Tts.Speaker == "" {
+			return errorx.New(errno.ErrMissingParams, errorx.KV("field", "语音形象"))
 		}
 	}
 
@@ -266,6 +262,9 @@ func extractUpdateBSON(req *profile.ConfigCreateOrUpdateReq) bson.M {
 		if tts.GetAppId() != "" {
 			setUpdate["tts.appid"] = tts.GetAppId()
 		}
+		if tts.GetSpeaker() != "" {
+			setUpdate["tts.speaker"] = tts.GetSpeaker()
+		}
 		setUpdate["tts.updatetime"] = now
 	}
 
@@ -312,6 +311,7 @@ func adminConfig(configDAO *config.Config) *profile.Config {
 			Description: configDAO.TTS.Description,
 			Provider:    configDAO.TTS.Provider,
 			AppId:       configDAO.TTS.AppID,
+			Speaker:     configDAO.TTS.Speaker,
 		},
 
 		Report: &profile.ReportApp{
