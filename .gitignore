@@ -27,3 +27,4 @@ go.work.sum
 /etc/*
 /output/*
 .DS_Store
+/etc
