@@ -2,6 +2,9 @@ package controller
 
 import (
 	"context"
+	"github.com/xh-polaris/gopkg/util"
+	"github.com/xh-polaris/psych-profile/pkg/errorx"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/google/wire"
 	"github.com/xh-polaris/psych-idl/kitex_gen/basic"
@@ -28,16 +31,19 @@ var ConfigControllerSet = wire.NewSet(
 )
 
 func (c *ConfigController) ConfigCreate(ctx context.Context, req *profile.ConfigCreateOrUpdateReq) (resp *basic.Response, err error) {
-	logs.Info("ConfigCreate", req)
-	return c.ConfigService.ConfigCreate(ctx, req)
+	resp, err = c.ConfigService.ConfigCreate(ctx, req)
+	logs.CtxInfof(ctx, "req=%s, resp=%s, err=%s, trace=%s", util.JSONF(req), util.JSONF(resp), errorx.ErrorWithoutStack(err), trace.SpanContextFromContext(ctx).TraceID().String())
+	return resp, err
 }
 
 func (c *ConfigController) ConfigUpdateInfo(ctx context.Context, req *profile.ConfigCreateOrUpdateReq) (resp *basic.Response, err error) {
-	logs.Info("ConfigUpdateInfo", req)
-	return c.ConfigService.ConfigUpdateInfo(ctx, req)
+	resp, err = c.ConfigService.ConfigUpdateInfo(ctx, req)
+	logs.CtxInfof(ctx, "req=%s, resp=%s, err=%s, trace=%s", util.JSONF(req), util.JSONF(resp), errorx.ErrorWithoutStack(err), trace.SpanContextFromContext(ctx).TraceID().String())
+	return resp, err
 }
 
 func (c *ConfigController) ConfigGetByUnitID(ctx context.Context, req *profile.ConfigGetByUnitIdReq) (resp *profile.ConfigGetByUnitIdResp, err error) {
-	logs.Info("ConfigGetByUnitID", req)
-	return c.ConfigService.ConfigGetByUnitID(ctx, req)
+	resp, err = c.ConfigService.ConfigGetByUnitID(ctx, req)
+	logs.CtxInfof(ctx, "req=%s, resp=%s, err=%s, trace=%s", util.JSONF(req), util.JSONF(resp), errorx.ErrorWithoutStack(err), trace.SpanContextFromContext(ctx).TraceID().String())
+	return resp, err
 }
