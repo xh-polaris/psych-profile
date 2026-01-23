@@ -21,4 +21,7 @@ type User struct {
 	CreateTime int64              `json:"createTime,omitempty" bson:"createTime,omitempty"`
 	UpdateTime int64              `json:"updateTime,omitempty" bson:"updateTime,omitempty"`
 	DeleteTime int64              `json:"deleteTime,omitempty" bson:"deleteTime,omitempty"`
+	// 对话相关
+	SessionNum      int64 `json:"sessionNum,omitempty" bson:"sessionNum,omitempty"`
+	LastSessionTime int64 `json:"lastSessionTime,omitempty" bson:"lastSessionTime,omitempty"`
 }

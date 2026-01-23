@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+
 	"github.com/xh-polaris/gopkg/util"
 	"github.com/xh-polaris/psych-profile/pkg/errorx"
 	"go.opentelemetry.io/otel/trace"

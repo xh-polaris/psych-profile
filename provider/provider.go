@@ -14,12 +14,14 @@ var ControllerSet = wire.NewSet(
 	controller.UserControllerSet,
 	controller.UnitControllerSet,
 	controller.ConfigControllerSet,
+	controller.DashboardControllerSet,
 )
 
 var ApplicationSet = wire.NewSet(
 	service.UserServiceSet,
 	service.UnitServiceSet,
 	service.ConfigServiceSet,
+	service.DashboardServiceSet,
 )
 
 var MapperSet = wire.NewSet(
